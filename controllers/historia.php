@@ -1,11 +1,25 @@
 <?php
 
 	// function para el GET
-	function getPreguntas(){
+	function getHistoria(){
 		global $conn;
 		
 		// query para la db 
-		$sql = "SELECT * from pregunta_frecuente";
+		$sql = "
+    		SELECT 
+        		h.id AS id, 
+        		h.tipo, 
+        		CASE 
+            		WHEN h.tipo = 'imagen' AND i.imagen IS NOT NULL 
+            		THEN i.imagen 
+            		ELSE h.texto 
+        		END AS texto, 
+        		h.activo 
+    		FROM historia h 
+    		LEFT JOIN historia_imagen hi ON h.id = hi.historia_id 
+    		LEFT JOIN imagen i ON hi.imagen_id = i.id 
+    		ORDER BY h.id;
+		";
 		// guarda la query en
 		$result = mysqli_query($conn, $sql);
 		// la asociacion 
@@ -17,20 +31,22 @@
 		// codifica a json mostrando..
 		echo json_encode(["Status" => "Success", "Data" => $rows]);
 	}
-	
+
 	// function para el POST
-	function addPreguntas(){
+	function addHistoria(){
 		global $conn;
 		
 		//obtener los datos enviados json
 		$data = json_decode(file_get_contents("php://input"), true);
+
 		$id = $data['id'] ?? '';
-		$pregunta = $data['pregunta'] ?? '';
-		$respuesta = $data['respuesta'] ?? '';
+		$tipo = $data['tipo'] ?? '';
+		$texto = $data['texto'] ?? '';
 		$activo = $data['activo'] ?? 0;
 		
-		//query para la db
-		$sql = "INSERT INTO pregunta_frecuente VALUES ('$id', '$pregunta', '$respuesta', '$activo')"; 
+		//query para la db - especificar columnas para evitar errores de conteo
+		$sql = "INSERT INTO historia (id, tipo, texto, activo) 
+				VALUES ('$id', '$tipo', '$texto', '$activo')"; 
 		//codifica a json
 		if (mysqli_query($conn, $sql)) {
 			echo json_encode(['Status' => 'Success', 'Message' => 'Registro agregado correctamente']);
@@ -38,49 +54,48 @@
 			echo json_encode(['Status' => 'Error', 'Message' => 'Error al agregar el registro']);
 		}	
 	}
-	
+
 	// function para el PUT
-	function updatePreguntas(){
+	function updateHistoria(){
 		global $conn;
 		
 		//obtener datos enviados
 		$data = json_decode(file_get_contents('php://input'), true);
 		$id = $data['id'] ?? '';
-		$pregunta = $data['pregunta'] ?? '';
-		$respuesta = $data['respuesta'] ?? '';
+		$tipo = $data['tipo'] ?? '';
+		$texto = $data['texto'] ?? '';
 		$activo = $data['activo'] ?? 0;
 
 		//query para la db
-		$sql = "UPDATE pregunta_frecuente SET pregunta='$pregunta', respuesta='$respuesta', activo='$activo' WHERE id=$id";
+		$sql = "UPDATE historia SET tipo = '$tipo', texto = '$texto', activo = '$activo' WHERE id = '$id'";
 		//codifica a json
 		if (mysqli_query($conn, $sql)) {
 			echo json_encode(['Status' => 'Success', 'Message' => 'Registro actualizado correctamente']);
 		} else {
 			echo json_encode(['Status' => 'Error', 'Message' => 'Error al actualizar el registro']);
 		}	
-		
 	}
 	
 	// function para el PATCH
-	function patchPreguntas(){
+	function patchHistoria(){
 		global $conn;
 		
 		//obtener datos enviados
 		$data = json_decode(file_get_contents('php://input'), true);
 		$id = $data['id'] ?? '';
 		$updates = [];
-		if (isset($data['pregunta'])) {
-			$updates[] = "pregunta='" . $data['pregunta'] . "'";
+		if (isset($data['tipo'])) {
+			$updates[] = "tipo='" . $data['tipo'] . "'";
 		}
-		if (isset($data['respuesta'])) {
-			$updates[] = "respuesta='" . $data['respuesta'] . "'";
+		if (isset($data['texto'])) {
+			$updates[] = "texto='" . $data['texto'] . "'";
 		}
 		if (isset($data['activo'])) {
 			$updates[] = "activo=" . $data['activo'];
 		}
 		if (count($updates) > 0) {
 		//query para la db
-		$sql = "UPDATE pregunta_frecuente SET  " . implode(", ", $updates) . " WHERE id=$id";
+		$sql = "UPDATE historia SET  " . implode(", ", $updates) . " WHERE id=$id";
 		//codifica a json
 			if (mysqli_query($conn, $sql)) {
 				echo json_encode(['Status' => 'Success', 'Message' => 'Registro actualizado correctamente']);
@@ -89,24 +104,22 @@
 			}
 		}
 	}
-	
+
 	// function para el DELETE
-	function deletePreguntas(){
+	function deleteHistoria(){
 		global $conn;
 		
 		//obtener datos enviados
 		$data = json_decode(file_get_contents('php://input'), true);
 		$id = $data['id'] ?? '';
+		
 		//query para la db
-		$sql = "DELETE FROM pregunta_frecuente WHERE id=$id";
+		$sql = "DELETE FROM historia WHERE id = '$id'";
 		//codifica a json
 		if (mysqli_query($conn, $sql)) {
-				echo json_encode(['Status' => 'Success', 'Message' => 'Registro borrado correctamente']);
-			} else {
-				echo json_encode(['Status' => 'Error', 'Message' => 'Error al borrar el registro']);
-			}
-		
+			echo json_encode(['Status' => 'Success', 'Message' => 'Registro eliminado correctamente']);
+		} else {
+			echo json_encode(['Status' => 'Error', 'Message' => 'Error al eliminar el registro']);
+		}	
 	}
-
-
 ?>
